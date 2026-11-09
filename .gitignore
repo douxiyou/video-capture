@@ -1,0 +1,16 @@
+# Go build and test outputs
+/video-capture
+/video-capture.exe
+/bin/
+*.test
+coverage.out
+*.prof
+
+# Local environment configuration
+.env
+.env.*
+!.env.example
+
+# OS and editor files
+.DS_Store
+.idea/
