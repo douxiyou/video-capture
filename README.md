@@ -2,7 +2,7 @@
 
 ## API 服务
 
-需要 Go 1.24 或更高版本。后端配置由 Viper 读取 YAML 文件，先复制示例并根据需要修改：
+需要 Go 1.24 或更高版本。首次执行 `go run`、`go build` 或 `go test` 前，请先按照下方说明构建前端。后端配置由 Viper 读取 YAML 文件，先复制示例并根据需要修改：
 
 ```sh
 cp config.example.yaml config.yaml
@@ -26,6 +26,23 @@ curl http://127.0.0.1:8080/health
 
 响应为 `{"status":"ok"}`。使用 Ctrl+C 或发送 SIGTERM 可以优雅停止服务。
 
+## 前端构建与部署
+
+先准备前端所需模型（参见前端说明），再构建前端和 Go 二进制：
+
+```sh
+cd frontend
+npm ci
+npm run build
+cd ..
+go build -o video-capture .
+./video-capture serve
+```
+
+Go 在编译时将 `frontend/dist` 嵌入二进制，API 与前端同源。页面导航支持 Vue Router 的 history 模式；未知 API 和不存在的静态资源返回 404。
+
+部署时无需另行分发 `frontend/dist`；配置文件、数据库、后端人脸模型和 ONNX Runtime 共享库等其他依赖仍需按实际配置提供。前端更新后必须重新构建前端并重新编译 Go 二进制。`frontend/dist` 不纳入版本控制，因此新检出项目后运行 `go run`、`go build` 或 `go test ./...` 前必须先运行前端构建，否则编译会失败。人脸识别所需前端模型须在构建前放入 `frontend/public/mediapipe`，才能包含在二进制内。
+
 ## 数据库迁移
 
 使用 SQLite 和 sqlx，先执行迁移创建用户表 `users` 和图片上传记录表 `image_uploads`：
@@ -44,7 +61,7 @@ go run . --config /path/to/config.yaml migrate
 
 **仅供本地实验，不可用于生产环境或作为可靠的防刷/身份验证方案。** 当前没有服务端活体检测，任何人都可能重放或伪造客户端提交的静态图片；数字图片验证码也可能被机器识别。MobileFaceNet 的预处理和默认相似度阈值 `0.6` 尚未用目标场景数据校准，不能保证查重的准确率或公平性。正式使用之前需要经过验证的服务端活体检测、可信采集、模型预处理及阈值校准、可靠的人机验证和限流。
 
-启用此功能需要 CGO、ONNX Runtime 共享库（需支持 API 版本 29，例如 ONNX Runtime 1.30 或 1.31）、仓库中的 `mobile_facenet-onnx-float/mobile_facenet.onnx` 及其同目录 `mobile_facenet.data` 文件。如果启动时提示 ONNX Runtime API 版本不可用，请检查 `face.onnx_library` 指向的共享库版本。设置 `face.enabled` 为 `false` 可关闭人脸认证，仅提供健康检查；为保持当前行为，默认值为 `true`。向量使用 AES-256-GCM 加密；准备两个独立的随机密钥并优先通过环境变量注入（标准 Base64 编码，解码后均至少 32 字节；加密密钥必须恰好 32 字节）。例如可以分别用 `openssl rand -base64 32` 生成，切勿提交密钥：
+启用此功能需要 CGO、ONNX Runtime 共享库（需支持 API 版本 29，例如 ONNX Runtime 1.30 或 1.31）、仓库中的 `mobile_facenet-onnx-float/mobile_facenet.onnx` 及其同目录 `mobile_facenet.data` 文件。如果启动时提示 ONNX Runtime API 版本不可用，请检查 `face.onnx_library` 指向的共享库版本。设置 `face.enabled` 为 `false` 可关闭人脸认证，只提供健康检查和静态前端；为保持当前行为，默认值为 `true`。向量使用 AES-256-GCM 加密；准备两个独立的随机密钥并优先通过环境变量注入（标准 Base64 编码，解码后均至少 32 字节；加密密钥必须恰好 32 字节）。例如可以分别用 `openssl rand -base64 32` 生成，切勿提交密钥：
 
 ```sh
 export FACE_ENCRYPTION_KEY='<加密密钥>'

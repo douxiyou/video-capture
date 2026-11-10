@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 
 	"douxiyou.com/video-capture/internal/config"
 	"douxiyou.com/video-capture/internal/server"
@@ -10,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewRootCommand() *cobra.Command {
+func NewRootCommand(frontend fs.FS) *cobra.Command {
 	root := &cobra.Command{
 		Use:           "video-capture",
 		Short:         "Video capture application",
@@ -33,9 +34,9 @@ func NewRootCommand() *cobra.Command {
 				return err
 			}
 			if cfg.Face.Enabled {
-				return serveExperimental(cmd.Context(), cfg)
+				return serveExperimental(cmd.Context(), cfg, frontend)
 			}
-			return server.Serve(cmd.Context(), cfg.Server.Addr)
+			return server.Serve(cmd.Context(), cfg.Server.Addr, frontend)
 		},
 	}
 

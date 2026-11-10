@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
@@ -23,6 +24,10 @@ type imageUploader interface {
 }
 
 func newRouter(registration *registrationService, uploaders ...imageUploader) http.Handler {
+	return newRouterWithFrontend(registration, nil, uploaders...)
+}
+
+func newRouterWithFrontend(registration *registrationService, frontend fs.FS, uploaders ...imageUploader) http.Handler {
 	router := chi.NewRouter()
 	router.Use(middleware.Recoverer)
 	router.Get("/health", func(w http.ResponseWriter, _ *http.Request) {
@@ -40,19 +45,22 @@ func newRouter(registration *registrationService, uploaders ...imageUploader) ht
 			router.Post("/api/images", registration.uploadImage(uploaders[0]))
 		}
 	}
+	if frontend != nil {
+		router.NotFound(frontendHandler(frontend).ServeHTTP)
+	}
 	return router
 }
 
-func Serve(ctx context.Context, addr string) error {
-	return serve(ctx, addr, NewRouter())
+func Serve(ctx context.Context, addr string, frontend fs.FS) error {
+	return serve(ctx, addr, newRouterWithFrontend(nil, frontend))
 }
 
-func ServeWithRegistration(ctx context.Context, addr string, db *sqlx.DB, model faceModel, encryptionKey, jwtKey []byte, threshold float64, uploader imageUploader) error {
+func ServeWithRegistration(ctx context.Context, addr string, db *sqlx.DB, model faceModel, encryptionKey, jwtKey []byte, threshold float64, uploader imageUploader, frontend fs.FS) error {
 	registration, err := newRegistrationService(db, model, encryptionKey, jwtKey, threshold)
 	if err != nil {
 		return fmt.Errorf("configure registration: %w", err)
 	}
-	return serve(ctx, addr, newRouter(registration, uploader))
+	return serve(ctx, addr, newRouterWithFrontend(registration, frontend, uploader))
 }
 
 func serve(ctx context.Context, addr string, handler http.Handler) error {

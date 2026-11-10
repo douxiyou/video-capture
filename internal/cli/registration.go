@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 
 	"douxiyou.com/video-capture/internal/config"
@@ -13,7 +14,7 @@ import (
 	"douxiyou.com/video-capture/internal/storage"
 )
 
-func serveExperimental(ctx context.Context, cfg config.Config) (runErr error) {
+func serveExperimental(ctx context.Context, cfg config.Config, frontend fs.FS) (runErr error) {
 	encryptionKey, err := base64.StdEncoding.DecodeString(cfg.Face.EncryptionKey)
 	if err != nil || len(encryptionKey) != 32 {
 		return errors.New("face.encryption_key (or FACE_ENCRYPTION_KEY) must be a base64-encoded 32-byte key")
@@ -66,7 +67,7 @@ func serveExperimental(ctx context.Context, cfg config.Config) (runErr error) {
 		}
 	}()
 	if uploader != nil {
-		return server.ServeWithRegistration(ctx, cfg.Server.Addr, db, model, encryptionKey, jwtKey, cfg.Face.Threshold, uploader)
+		return server.ServeWithRegistration(ctx, cfg.Server.Addr, db, model, encryptionKey, jwtKey, cfg.Face.Threshold, uploader, frontend)
 	}
-	return server.ServeWithRegistration(ctx, cfg.Server.Addr, db, model, encryptionKey, jwtKey, cfg.Face.Threshold, nil)
+	return server.ServeWithRegistration(ctx, cfg.Server.Addr, db, model, encryptionKey, jwtKey, cfg.Face.Threshold, nil, frontend)
 }

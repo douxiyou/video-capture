@@ -10,7 +10,7 @@ import (
 )
 
 func TestHelpIncludesServe(t *testing.T) {
-	cmd := NewRootCommand()
+	cmd := NewRootCommand(nil)
 	var output bytes.Buffer
 	cmd.SetOut(&output)
 	cmd.SetArgs([]string{"--help"})
@@ -27,7 +27,7 @@ func TestMigrateCommand(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "test.db")
 	config := writeConfig(t, fmt.Sprintf("database:\n  path: %q\n", path))
 	for _, want := range []string{"Applied 3 migration(s).", "Database is already up to date."} {
-		cmd := NewRootCommand()
+		cmd := NewRootCommand(nil)
 		var output bytes.Buffer
 		cmd.SetOut(&output)
 		cmd.SetArgs([]string{"migrate", "--config", config})
@@ -41,7 +41,7 @@ func TestMigrateCommand(t *testing.T) {
 }
 
 func TestMigrateRejectsArguments(t *testing.T) {
-	cmd := NewRootCommand()
+	cmd := NewRootCommand(nil)
 	cmd.SetArgs([]string{"migrate", "unexpected"})
 	if err := cmd.Execute(); err == nil {
 		t.Fatal("expected an error for an unexpected argument")
@@ -49,7 +49,7 @@ func TestMigrateRejectsArguments(t *testing.T) {
 }
 
 func TestMigrateInvalidPath(t *testing.T) {
-	cmd := NewRootCommand()
+	cmd := NewRootCommand(nil)
 	config := writeConfig(t, fmt.Sprintf("database:\n  path: %q\n", filepath.Join(t.TempDir(), "missing", "test.db")))
 	cmd.SetArgs([]string{"migrate", "--config", config})
 	if err := cmd.Execute(); err == nil {
@@ -58,7 +58,7 @@ func TestMigrateInvalidPath(t *testing.T) {
 }
 
 func TestServeRejectsArguments(t *testing.T) {
-	cmd := NewRootCommand()
+	cmd := NewRootCommand(nil)
 	cmd.SetArgs([]string{"serve", "unexpected"})
 	if err := cmd.Execute(); err == nil {
 		t.Fatal("expected an error for an unexpected argument")
@@ -66,7 +66,7 @@ func TestServeRejectsArguments(t *testing.T) {
 }
 
 func TestServeInvalidAddress(t *testing.T) {
-	cmd := NewRootCommand()
+	cmd := NewRootCommand(nil)
 	config := writeConfig(t, "server:\n  addr: invalid-address\nface:\n  enabled: false\n")
 	cmd.SetArgs([]string{"serve", "--config", config})
 	if err := cmd.Execute(); err == nil {
@@ -84,7 +84,7 @@ func writeConfig(t *testing.T, data string) string {
 }
 
 func TestMissingExplicitConfig(t *testing.T) {
-	cmd := NewRootCommand()
+	cmd := NewRootCommand(nil)
 	cmd.SetArgs([]string{"--config", filepath.Join(t.TempDir(), "missing.yaml"), "migrate"})
 	if err := cmd.Execute(); err == nil || !strings.Contains(err.Error(), "read configuration") {
 		t.Fatalf("expected configuration error, got %v", err)
@@ -92,7 +92,7 @@ func TestMissingExplicitConfig(t *testing.T) {
 }
 
 func TestOldFlagsRejected(t *testing.T) {
-	cmd := NewRootCommand()
+	cmd := NewRootCommand(nil)
 	cmd.SetArgs([]string{"migrate", "--db", "test.db"})
 	if err := cmd.Execute(); err == nil {
 		t.Fatal("expected removed flag to be rejected")

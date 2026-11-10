@@ -43,7 +43,7 @@ func TestServeListenError(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer listener.Close()
-	if err := Serve(context.Background(), listener.Addr().String()); err == nil {
+	if err := Serve(context.Background(), listener.Addr().String(), nil); err == nil {
 		t.Fatal("expected an error for an occupied address")
 	}
 }
@@ -51,7 +51,7 @@ func TestServeListenError(t *testing.T) {
 func TestServeCanceledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if err := Serve(ctx, "127.0.0.1:0"); err != context.Canceled {
+	if err := Serve(ctx, "127.0.0.1:0", nil); err != context.Canceled {
 		t.Fatalf("error = %v, want context.Canceled", err)
 	}
 }
