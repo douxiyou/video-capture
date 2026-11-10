@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
+import { Toaster } from 'vue-sonner'
+import 'vue-sonner/style.css'
 </script>
 
 <template>
-  <HelloWorld />
+  <router-view />
+  <Toaster />
 </template>

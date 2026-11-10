@@ -1,5 +1,26 @@
-# Vue 3 + TypeScript + Vite
+# 表情采集工作台
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+```sh
+npm install
+npm run dev
+```
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+使用 localhost 或 HTTPS 访问页面，并允许浏览器使用摄像头。页面需要先通过验证码和人脸注册或登录；已有用户请选择登录。用户名保存在 Pinia，本次标签页的用户凭证保存在 sessionStorage，刷新后会向服务端验证，关闭标签页或凭证过期后需要重新登录。登出会清除本地会话，删除账户会调用服务端删除用户及其人脸特征，但不会删除本地照片。
+
+人脸验证需将兼容 MediaPipe Face Landmarker 的模型放在 `public/mediapipe/face_landmarker.task`；页面使用关键点将单张人脸对齐为 112×112 JPEG 后发送给后端。模型、摄像头或网络不可用时无法完成认证。拍照预览另使用 `public/mediapipe/face_detector.tflite`，该模型不可用时可使用普通预览。MediaPipe 的 WASM 运行时由构建配置从已安装的依赖中提供。
+
+**认证仍为实验功能**：没有活体检测，照片重放可能通过，模型预处理和阈值未经校准，不适合生产身份验证或防刷。用户同意后图像会发送到服务器；服务器不保存原图，但会加密保存人脸特征。照片仍保存在当前浏览器的本地存储中，不按用户隔离；清除浏览器数据会删除照片，存储空间不足时需要先删除照片。
+
+请按仓库根目录的说明配置 YAML、执行迁移并启用实验性人脸注册后启动后端。Vite 开发服务器默认将 `/api` 代理到 `127.0.0.1:8080`；部署时需要同源反向代理 `/api`，或通过 `VITE_API_BASE_URL` 指定允许跨域的接口地址（后端本身不提供跨域配置）。请求超时默认为 15 秒。
+
+拍照后照片先保存到本地，再通过 `POST /api/images` 在后台上传；队列最多同时发送 3 张，拍照无需等待上传。需在后端启用 OSS 并配置凭证。卡片显示排队、上传、成功或失败状态；确认未上传的失败可以手动重试。超时、网络中断、服务器报告 `pending` 或页面关闭时正在上传的照片，其结果可能已写入 OSS，卡片会标记为“结果待核对”，不会自动重试；请提供记录编号（如有）给管理员，按根目录文档核对。旧版本的本地照片不会自动上传。
+
+退出登录后排队任务暂停，已发送的请求可能仍会完成；同一账户重新登录后恢复其排队任务，不会使用其他账户上传。刷新时仅恢复尚未发送的任务，上传中的任务标记为待核对。请勿在多个标签页同时操作照片：本地存储和队列不支持跨标签页协调。删除卡片只删除本地照片，不会删除已上传的 OSS 对象；清除浏览器数据也会丢失未上传照片及状态。
+
+如果浏览器存储异常导致上传暂停，释放空间或修复存储问题后可点击“恢复上传”。若开发时热更新后出现 store 方法不存在，请刷新页面加载最新代码；排队的照片会在会话恢复后继续，正在上传的照片则需核对。
+
+构建前端：
+
+```sh
+npm run build
+```

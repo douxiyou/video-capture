@@ -5,6 +5,9 @@
 *.test
 coverage.out
 *.prof
+/video-capture.db
+/video-capture.db-*
+/config.yaml
 
 # Local environment configuration
 .env
@@ -14,3 +17,5 @@ coverage.out
 # OS and editor files
 .DS_Store
 .idea/
+temp
+config.yaml

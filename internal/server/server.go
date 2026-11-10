@@ -11,19 +11,51 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jmoiron/sqlx"
 )
 
 func NewRouter() http.Handler {
+	return newRouter(nil)
+}
+
+type imageUploader interface {
+	Put(ctx context.Context, key, contentType string, data []byte) error
+}
+
+func newRouter(registration *registrationService, uploaders ...imageUploader) http.Handler {
 	router := chi.NewRouter()
 	router.Use(middleware.Recoverer)
 	router.Get("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte("{\"status\":\"ok\"}\n"))
 	})
+	if registration != nil {
+		router.Get("/api/captcha", registration.captcha)
+		router.Post("/api/guest", registration.issueGuest)
+		router.Post("/api/register", registration.register)
+		router.Post("/api/login", registration.login)
+		router.Get("/api/user", registration.getUser)
+		router.Delete("/api/user", registration.deleteUser)
+		if len(uploaders) > 0 && uploaders[0] != nil {
+			router.Post("/api/images", registration.uploadImage(uploaders[0]))
+		}
+	}
 	return router
 }
 
 func Serve(ctx context.Context, addr string) error {
+	return serve(ctx, addr, NewRouter())
+}
+
+func ServeWithRegistration(ctx context.Context, addr string, db *sqlx.DB, model faceModel, encryptionKey, jwtKey []byte, threshold float64, uploader imageUploader) error {
+	registration, err := newRegistrationService(db, model, encryptionKey, jwtKey, threshold)
+	if err != nil {
+		return fmt.Errorf("configure registration: %w", err)
+	}
+	return serve(ctx, addr, newRouter(registration, uploader))
+}
+
+func serve(ctx context.Context, addr string, handler http.Handler) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -34,8 +66,9 @@ func Serve(ctx context.Context, addr string) error {
 	}
 
 	srv := &http.Server{
-		Handler:           NewRouter(),
+		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
 	}
 	done := make(chan error, 1)
 	go func() {

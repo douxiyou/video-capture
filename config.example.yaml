@@ -1,0 +1,28 @@
+server:
+  addr: ":8080"
+
+database:
+  path: "video-capture.db"
+
+face:
+  # Experimental only: no liveness detection; do not use in production.
+  enabled: true
+  model_path: "mobile_facenet-onnx-float/mobile_facenet.onnx"
+  onnx_library: "./temp/libonnxruntime.dylib"
+  threshold: 0.6
+  # Prefer the FACE_ENCRYPTION_KEY environment variable.
+  encryption_key: ""
+
+auth:
+  # Prefer the JWT_SIGNING_KEY environment variable.
+  jwt_signing_key: ""
+
+oss:
+  # Prefer environment variables for secrets; do not commit real credentials.
+  session_token: "" # Optional STS session token.
+  access_key_id: ""
+  access_key_secret: ""
+  enabled: true
+  region: ""
+  bucket: ""
+  endpoint: ""
